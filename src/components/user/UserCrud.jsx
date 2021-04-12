@@ -1,6 +1,8 @@
 import React, { Component } from 'react'
 import Main from '../template/Main'
 import axios from 'axios'
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const headerProps = {
     icon: 'users',
@@ -14,9 +16,11 @@ const initialState = {
             nomeusuario: '',
             loginusuario: '',
             ativo: true,  
-            senhausuario: '' 
+            senhausuario: '',
+            tmdataultimoacesso: null
         },
-    list: []
+    list: [],
+    bool: true
 }
 
 export default class UserCrud extends Component {
@@ -33,22 +37,68 @@ export default class UserCrud extends Component {
             },
         }).then(resp => {
                 //console.log(resp.data)
+                
                 this.setState({ list: resp.data })
+                this.toastShowInfo("Lista carregada c/ sucesso!")
             }).catch(function (error) {
                 console.log(error);
             });
     }
 
-    clear() {
-        this.setState({ user: initialState.user })
+    toastShowInfo(str){
+        toast.info(str, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            });
     }
 
+    toastShow(str){
+        toast.success(str, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            });
+    }
+
+    toastShowNegative(str){
+        toast.error(str, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            });
+    }
+
+
+    //Metodo Limpa Campos ...
+    clear() {
+        this.state.bool = true;
+        this.setState({ user: initialState.user, bool: this.state.bool })
+    }
+
+    //Metodo Salvar User ...
     save() {
         const user = this.state.user
         const method = user.id ? 'put' : 'post'
         const url = user.id ? `${baseUrl}/${user.idusuario}` : baseUrl
 
+        let datatimzone = this.formatDateTimeSend(user.tmdataultimoacesso);
+        this.state.user.tmdataultimoacesso = datatimzone;
+
         //console.log(user);
+
         axios[method](url, user,{
             headers: {
                 "Access-Control-Allow-Origin": "*",
@@ -58,28 +108,101 @@ export default class UserCrud extends Component {
             },
         }).then(resp => {
             const list = this.getUpdateList(resp.data)
-            this.setState({ user: initialState.user, list })
+            this.state.bool = true;
+            this.setState({ user: initialState.user, list, bool: this.state.bool })
+            this.toastShow("Salvo c/ sucesso!")
         }).catch(function (error) {
+            this.toastShowNegative("Revise os campos, tente novamente!")
             console.log(error);
         });
     }
 
+    //Metodo Atualiza a Lista ...
     getUpdateList(user) {
         const list = this.state.list.filter(u => u.idusuario !== user.idusuario)
         list.unshift(user)
         return list
     }
 
+    //Metodo atualiza os campos ...
     updateField(event) {
         const user = { ...this.state.user }
         user[event.target.name] = event.target.value
         this.setState({ user })
     }
 
+    // Metodo carrega usuario no form ...
+    load(user) {
+
+        //console.log(user.tmdataultimoacesso);
+        if(user.tmdataultimoacesso == null){
+            user.tmdataultimoacesso = null
+        }else{
+            user.tmdataultimoacesso = this.formatDateTime(user.tmdataultimoacesso)
+        }
+        
+        this.state.bool = false;
+        this.setState({ user, bool: this.state.bool })
+    }
+
+    // Deleta Usuario ..
+    remove(user) {
+
+        axios.delete(baseUrl, {
+            data: user,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Authorization",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, PATCH, DELETE",
+                "Content-Type": "application/json;charset=UTF-8"
+            },
+        }).then(resp => {
+            const list = this.state.list.filter(u => u !== user)
+            this.setState({ list })
+            this.toastShow("Removido c/ sucesso!")
+        }).catch(function (error) {
+            console.log(error);
+        });
+    }
+
+    //Formata Data de retorno
+    formatDateTime(date) {
+
+        console.log(date);
+
+        if(date == null){
+            return 'Não possui acesso.'
+        }else{
+            let ano = date.substring(0, 4);
+            let mes = date.substring(7, 5);
+            let dia = date.substring(10, 8);
+            let hr = date.substring(19, 11)
+    
+            return (dia + '/' + mes + '/' + ano + ' ' + hr);
+        }
+    }
+
+    //Formata Data p/ envio
+    formatDateTimeSend(dateTimeString) {
+
+        if(dateTimeString == null){
+            return null
+        }else{
+            const [date, time] = dateTimeString.split(' ');
+            const [DD, MM, YYYY] = date.split('/');
+            const [HH, mm] = time.split(':');
+        
+            return `${YYYY}-${MM}-${DD}T${HH}:${mm}`;
+        }
+    }
+
+   
+
     renderForm() {
         return (
+            
             <div className="form">
-                <div className="row">
+                <div className="row" >
                     <div className="col-12 col-md-6">
                         <div className="form-group">
                             <label>Nome:</label>
@@ -93,7 +216,7 @@ export default class UserCrud extends Component {
                     </div>
                 </div>
 
-                <div className="row ">
+                <div className="row">
                     <div className="form-group col-12 col-md-3">
                         <label>Login:</label>
                         <input type="text" className="form-control"
@@ -114,23 +237,21 @@ export default class UserCrud extends Component {
                     </div>
                 </div>
 
-                <div className="row ">
+                <div className="row" hidden={this.state.bool}>
                     <div className="form-group col-12 col-md-3">
                         <label>Ativo:</label>
-                        <input type="text" className="form-control"
-                            name="loginusuario"
-                            value={this.state.user.loginusuario}
-                            onChange={e => this.updateField(e)}
-                            placeholder="Digite o Login"
-                        />
+                        <select className="form-control" name="ativo" value={this.state.ativo}  onChange={e => this.updateField(e)}>
+                            <option value={true}>Ativo</option>
+                            <option value={false}>Inativo</option>
+                        </select>
                     </div>
                     <div className="form-group col-12 col-md-3">
                         <label>Dt/hr Último Acesso:</label>
                         <input type="text" className="form-control"
-                            name="senhausuario"
-                            value={this.state.user.senhausuario}
+                            name="tmdataultimoacesso"
+                            value={this.state.user.tmdataultimoacesso}
                             onChange={e => this.updateField(e)}
-                            placeholder="Digite a senha"
+                            placeholder="Ex. 00/00/0000 00:00:00"
                         />
                     </div>
                 </div>
@@ -153,28 +274,7 @@ export default class UserCrud extends Component {
         )
     }
 
-    load(user) {
-        this.setState({ user })
-    }
-
-    remove(user) {
-
-        axios.delete(baseUrl, {
-            data: user,
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "Authorization",
-                "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, PATCH, DELETE",
-                "Content-Type": "application/json;charset=UTF-8"
-            },
-        }).then(resp => {
-            const list = this.state.list.filter(u => u !== user)
-            this.setState({ list })
-        }).catch(function (error) {
-            console.log(error);
-        });
-    }
-
+   
     renderTable() {
         return (
             <table className="table mt-4">
@@ -225,20 +325,6 @@ export default class UserCrud extends Component {
         )
     }
 
-    formatDateTime(date) {
-
-        if(date == null){
-            return 'Não possui acesso.'
-        }else{
-            let ano = date.substring(0, 4);
-            let mes = date.substring(7, 5);
-            let dia = date.substring(10, 8);
-            let hr = date.substring(19, 11)
-    
-            return (dia + '/' + mes + '/' + ano + ' ' + hr);
-        }
-
-    }
 
     render() {
         //console.log(this.state.list);
@@ -246,6 +332,7 @@ export default class UserCrud extends Component {
             <Main {...headerProps}>
                 {this.renderForm()}
                 {this.renderTable()}
+                <ToastContainer />
             </Main>
         )
     }
