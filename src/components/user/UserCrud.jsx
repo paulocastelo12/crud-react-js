@@ -8,9 +8,14 @@ const headerProps = {
     subtitle: 'Cadastro de usuários'
 }
 
-const baseUrl = "http://localhost:3001/users";
+const baseUrl = "http://localhost:8080/api/usersmodel";
 const initialState = {
-    user: { name: '', email: '' },
+    user: { 
+            nomeusuario: '',
+            loginusuario: '',
+            ativo: true,  
+            senhausuario: '' 
+        },
     list: []
 }
 
@@ -18,12 +23,20 @@ export default class UserCrud extends Component {
 
     state = { ...initialState }
 
-    componentWillMount(){
-        axios(baseUrl).then(
-            resp => {
-                this.setState({list: resp.data})
-            }
-        )
+    componentWillMount() {
+        axios(baseUrl, {
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Authorization",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, PATCH, DELETE",
+                "Content-Type": "application/json;charset=UTF-8"
+            },
+        }).then(resp => {
+                //console.log(resp.data)
+                this.setState({ list: resp.data })
+            }).catch(function (error) {
+                console.log(error);
+            });
     }
 
     clear() {
@@ -33,17 +46,26 @@ export default class UserCrud extends Component {
     save() {
         const user = this.state.user
         const method = user.id ? 'put' : 'post'
-        const url = user.id ? `${baseUrl}/${user.id}` : baseUrl
+        const url = user.id ? `${baseUrl}/${user.idusuario}` : baseUrl
 
-        axios[method](url, user)
-            .then(resp => {
-                const list = this.getUpdateList(resp.data)
-                this.setState({ user: initialState.user, list })
-            })
+        //console.log(user);
+        axios[method](url, user,{
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Authorization",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, PATCH, DELETE",
+                "Content-Type": "application/json;charset=UTF-8"
+            },
+        }).then(resp => {
+            const list = this.getUpdateList(resp.data)
+            this.setState({ user: initialState.user, list })
+        }).catch(function (error) {
+            console.log(error);
+        });
     }
 
     getUpdateList(user) {
-        const list = this.state.list.filter(u => u.id !== user.id)
+        const list = this.state.list.filter(u => u.idusuario !== user.idusuario)
         list.unshift(user)
         return list
     }
@@ -62,21 +84,54 @@ export default class UserCrud extends Component {
                         <div className="form-group">
                             <label>Nome:</label>
                             <input type="text" className="form-control"
-                                name="name"
-                                value={this.state.user.name}
+                                name="nomeusuario"
+                                value={this.state.user.nomeusuario}
                                 onChange={e => this.updateField(e)}
                                 placeholder="Digite o nome"
                             />
                         </div>
-                        <div className="form-group">
-                            <label>Email:</label>
-                            <input type="text" className="form-control"
-                                name="email"
-                                value={this.state.user.email}
-                                onChange={e => this.updateField(e)}
-                                placeholder="Digite o email"
-                            />
-                        </div>
+                    </div>
+                </div>
+
+                <div className="row ">
+                    <div className="form-group col-12 col-md-3">
+                        <label>Login:</label>
+                        <input type="text" className="form-control"
+                            name="loginusuario"
+                            value={this.state.user.loginusuario}
+                            onChange={e => this.updateField(e)}
+                            placeholder="Digite o Login"
+                        />
+                    </div>
+                    <div className="form-group col-12 col-md-3">
+                        <label>Senha:</label>
+                        <input type="password" className="form-control"
+                            name="senhausuario"
+                            value={this.state.user.senhausuario}
+                            onChange={e => this.updateField(e)}
+                            placeholder="Digite a senha"
+                        />
+                    </div>
+                </div>
+
+                <div className="row ">
+                    <div className="form-group col-12 col-md-3">
+                        <label>Ativo:</label>
+                        <input type="text" className="form-control"
+                            name="loginusuario"
+                            value={this.state.user.loginusuario}
+                            onChange={e => this.updateField(e)}
+                            placeholder="Digite o Login"
+                        />
+                    </div>
+                    <div className="form-group col-12 col-md-3">
+                        <label>Dt/hr Último Acesso:</label>
+                        <input type="text" className="form-control"
+                            name="senhausuario"
+                            value={this.state.user.senhausuario}
+                            onChange={e => this.updateField(e)}
+                            placeholder="Digite a senha"
+                        />
                     </div>
                 </div>
                 <hr />
@@ -98,28 +153,38 @@ export default class UserCrud extends Component {
         )
     }
 
-    load(user){
-        this.setState({user})
+    load(user) {
+        this.setState({ user })
     }
 
-    remove(user){
+    remove(user) {
 
-        console.log(user.id);
-
-        axios.delete(`${baseUrl}/${user.id}`).then(resp =>{
+        axios.delete(baseUrl, {
+            data: user,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Authorization",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, PATCH, DELETE",
+                "Content-Type": "application/json;charset=UTF-8"
+            },
+        }).then(resp => {
             const list = this.state.list.filter(u => u !== user)
-            this.setState({list})
-        })
+            this.setState({ list })
+        }).catch(function (error) {
+            console.log(error);
+        });
     }
 
-    renderTable() { 
-        return(
+    renderTable() {
+        return (
             <table className="table mt-4">
                 <thead>
                     <tr>
                         <th>Id</th>
                         <th>Nome</th>
-                        <th>Email</th>
+                        <th>Login</th>
+                        <th>Situação</th>
+                        <th>Último acesso</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -130,14 +195,19 @@ export default class UserCrud extends Component {
         )
     }
 
-    renderRows() { 
+    renderRows() {
         return this.state.list.map(
             user => {
+
+                let stateUser = user.ativo ? 'Ativo' : 'Inativo';
+
                 return (
-                    <tr key={user.id}>
-                        <td>{user.id}</td>
-                        <td>{user.name}</td>
-                        <td>{user.email}</td>
+                    <tr key={user.idusuario}>
+                        <td>{user.idusuario}</td>
+                        <td>{user.nomeusuario}</td>
+                        <td>{user.loginusuario}</td>
+                        <td>{stateUser}</td>
+                        <td>{this.formatDateTime(user.tmdataultimoacesso)}</td>
                         <td>
                             <button className="btn btn-warning"
                                 onClick={() => this.load(user)}>
@@ -147,12 +217,27 @@ export default class UserCrud extends Component {
                                 onClick={() => this.remove(user)}>
                                 <i className="fa fa-trash"></i>
                             </button>
-                        
+
                         </td>
                     </tr>
                 )
             }
         )
+    }
+
+    formatDateTime(date) {
+
+        if(date == null){
+            return 'Não possui acesso.'
+        }else{
+            let ano = date.substring(0, 4);
+            let mes = date.substring(7, 5);
+            let dia = date.substring(10, 8);
+            let hr = date.substring(19, 11)
+    
+            return (dia + '/' + mes + '/' + ano + ' ' + hr);
+        }
+
     }
 
     render() {

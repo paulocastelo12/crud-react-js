@@ -15,13 +15,11 @@ export default (props) => {
     return (
         <BrowserRouter>
             <div className="app">
-                <Logo />
-                <Nav />
+                <Logo/>
+                <Nav/>
                 <Routes/>
-                <Footer />
+                <Footer/>
             </div>
         </BrowserRouter>
-
-
     )
 }
